@@ -1,0 +1,17 @@
+{
+  "name": "feishu-kb-sync",
+  "version": "0.1.0",
+  "description": "飞书知识库 → 本地缓存同步器（编译按需化方案的机械层）：遍历知识库树、对比 manifest、下载原文、提取文本，支持系统原生定时调度",
+  "license": "UNLICENSED",
+  "private": true,
+  "bin": {
+    "feishu-kb-sync": "bin/feishu-kb-sync.js"
+  },
+  "scripts": {
+    "start": "node bin/feishu-kb-sync.js",
+    "test": "node scripts/check-schedule-vbs.js && node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
