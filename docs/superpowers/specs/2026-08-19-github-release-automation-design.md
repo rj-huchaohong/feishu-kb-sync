@@ -1,7 +1,7 @@
 # `feishu-kb-sync` GitHub Release 自动化设计
 
 - 日期：2026-08-19
-- 状态：设计已确认，待实现
+- 状态：已实现（待远程 Tag 触发验证）
 - 范围：公开 GitHub Release 的 Tag 触发、版本校验、运行时发布包构建和资产上传
 
 ## 1. 目标
@@ -136,4 +136,3 @@ https://github.com/rj-huchaohong/feishu-kb-sync/releases/download/v<version>/fei
 6. ZIP 的 SHA-256 校验文件能够验证 ZIP。
 7. 已有 Release 不会被同名 Tag 的重复运行覆盖。
 8. 公开仓库的 Release 资产可通过 HTTPS 直接下载。
-

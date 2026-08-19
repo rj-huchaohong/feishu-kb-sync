@@ -1,0 +1,104 @@
+name: Release feishu-kb-sync
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+
+      - name: Validate tag and package version
+        shell: bash
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$TAG_NAME" != v* || "$TAG_NAME" == "v" ]]; then
+            echo "Invalid release tag: $TAG_NAME"
+            echo "Release tags must start with v and contain a version, for example v0.1.0."
+            exit 1
+          fi
+
+          expected_version="${TAG_NAME#v}"
+          package_version="$(node -p "require('./package.json').version")"
+
+          if [[ "$package_version" != "$expected_version" ]]; then
+            echo "Tag version ($expected_version) does not match package.json version ($package_version)."
+            exit 1
+          fi
+
+          echo "Validated release version: $package_version"
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build runtime package
+        shell: bash
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          version="${TAG_NAME#v}"
+          asset_name="feishu-kb-sync-v${version}.zip"
+          asset_path="dist/${asset_name}"
+
+          required_paths=(bin lib scripts diag-export.js package.json)
+          for required_path in "${required_paths[@]}"; do
+            if [[ ! -e "$required_path" ]]; then
+              echo "Required release path is missing: $required_path"
+              exit 1
+            fi
+          done
+
+          rm -rf dist
+          mkdir -p dist
+          zip -qr "$asset_path" "${required_paths[@]}"
+
+          if unzip -Z1 "$asset_path" | grep -Eq '(^|/)(\.git|node_modules|\.tmp)(/|$)|(^|/)docs(/|$)'; then
+            echo "Release package contains excluded development content."
+            exit 1
+          fi
+
+          (cd dist && sha256sum "$asset_name" > "${asset_name}.sha256")
+
+          echo "ASSET_NAME=$asset_name" >> "$GITHUB_ENV"
+          echo "ASSET_PATH=$asset_path" >> "$GITHUB_ENV"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          gh release create "$TAG_NAME" \
+            "$ASSET_PATH" \
+            "${ASSET_PATH}.sha256" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "feishu-kb-sync $TAG_NAME" \
+            --generate-notes \
+            --verify-tag
