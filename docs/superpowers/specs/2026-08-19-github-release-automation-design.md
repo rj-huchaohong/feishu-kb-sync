@@ -16,7 +16,7 @@
 - 不改变 `feishu-kb-sync` 的 CLI 命令、配置文件或调度行为。
 - 不让普通 `main` 分支提交自动创建 Release。
 - 不把工作区的 `.git`、临时目录、`node_modules`、设计文档或其他开发资料放入运行时发布包。
-- 不复用当前 `package-skill` 作为 Release 的唯一打包入口；该命令保留原有用途，Release Workflow 使用独立且明确的运行时文件白名单。
+- Release Workflow 使用独立且明确的运行时文件白名单，不依赖同步器内置的本地打包命令。
 
 ## 3. 触发与权限
 

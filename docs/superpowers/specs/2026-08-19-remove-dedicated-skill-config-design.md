@@ -24,7 +24,7 @@
 - `config set-root`：继续配置本地同步缓存根目录。
 - `config add <名称> <链接|space_id>`：只保存知识库名称和 `space_id`。
 - `config list`、`config remove` 的知识库配置能力。
-- `package-skill`：它用于打包同步器自身，和知识库专属 Skill 配置是不同职责，不在本次移除范围内。
+- 同步器不再提供独立的本地发布打包命令；运行包由 GitHub Release Workflow 统一生成。
 - 用户磁盘上已有的专属 Skill 文件：同步器不再读取、写入、迁移或删除这些文件。
 - 已存在配置文件中的旧 `skills_root`、`skill_suffixes`：读取时忽略；下次由同步器保存配置时不再写回。
 
