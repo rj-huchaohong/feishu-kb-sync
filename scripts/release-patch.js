@@ -58,7 +58,8 @@ function run(command, args) {
   const result = spawnSync(executable(command), args, {
     cwd: ROOT,
     stdio: 'inherit',
-    shell: false,
+    // Windows 的 npm.cmd 是批处理文件，必须通过 shell 启动；Git 仍保持 shell:false。
+    shell: process.platform === 'win32' && command === 'npm',
     windowsHide: false,
   });
   if (result.error) throw result.error;
@@ -169,11 +170,13 @@ async function main() {
 
   const originalPackage = fs.readFileSync(PACKAGE_FILE, 'utf8');
   let committed = false;
+  let packageUpdated = false;
   try {
     run('npm', ['test']);
 
     const nextPackage = { ...pkg, version: targetVersion };
     fs.writeFileSync(PACKAGE_FILE, `${JSON.stringify(nextPackage, null, 2)}\n`, 'utf8');
+    packageUpdated = true;
 
     run('git', ['add', 'package.json']);
     run('git', ['commit', '-m', `release: ${tag}`]);
@@ -186,7 +189,7 @@ async function main() {
     console.log(`发布流程完成：${tag}`);
     console.log(`GitHub Actions 将开始构建并创建 ${tag} Release。`);
   } catch (error) {
-    if (!committed) {
+    if (!committed && packageUpdated) {
       fs.writeFileSync(PACKAGE_FILE, originalPackage, 'utf8');
       try {
         run('git', ['restore', '--staged', 'package.json']);
