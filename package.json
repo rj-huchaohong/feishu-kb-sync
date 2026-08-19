@@ -9,7 +9,9 @@
   },
   "scripts": {
     "start": "node bin/feishu-kb-sync.js",
-    "test": "node scripts/check-schedule-vbs.js && node --test"
+    "test": "node scripts/check-schedule-vbs.js && node --test",
+    "release": "node scripts/release-patch.js",
+    "release:patch": "node scripts/release-patch.js"
   },
   "engines": {
     "node": ">=18"

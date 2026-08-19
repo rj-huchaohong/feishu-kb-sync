@@ -152,3 +152,38 @@ git push origin v0.1.0
 
 Tag 去掉 `v` 后必须与 `package.json` 的 `version` 完全一致。Workflow 会运行测试，生成运行时 ZIP 和 SHA-256 校验文件，并创建 GitHub Release。
 
+也可以使用脚本自动递增补丁版本并完成发布前的 Git 操作：
+
+```bash
+npm run release:patch
+```
+
+脚本会将当前版本的补丁号加 1，例如 `0.1.1 → 0.1.2`，然后依次运行测试、提交 `package.json`、推送 `main`、创建 Tag 和推送 Tag。默认执行前会要求确认。
+
+默认发布小版本（补丁号）：
+
+```bash
+npm run release
+```
+
+发布大版本（中间版本号加 1，末尾版本号清零）：
+
+```bash
+npm run release -- --minor
+```
+
+例如当前版本为 `0.1.1` 时，`npm run release` 目标为 `0.1.2`，`npm run release -- --minor` 目标为 `0.2.0`。
+
+仅预览，不修改文件、不测试、不推送：
+
+```bash
+npm run release -- --dry-run
+```
+
+自动确认执行：
+
+```bash
+npm run release -- --yes
+```
+
+脚本也支持显式指定小版本模式：`npm run release -- --patch`。脚本要求当前处于 `main` 分支且工作区干净，并会拒绝使用已经存在的本地或远程 Tag。
