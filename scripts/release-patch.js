@@ -2,7 +2,7 @@
 
 /**
  * 自动发布版本：
- *   默认将 patch +1；使用 --minor 时将 minor +1，并将 patch 清零
+ *   默认发布 package.json 当前版本；使用 --patch 或 --minor 时才递增版本
  *   运行测试
  *   提交版本变更
  *   推送 main
@@ -15,29 +15,30 @@
  *   node scripts/release-patch.js --dry-run
  *
  * 自动确认：
- *   node scripts/release-patch.js --minor --yes
+ *   node scripts/release-patch.js --patch --yes
  */
 
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 const { spawnSync } = require('child_process');
+const { nextVersion, modeLabel, validateVersion } = require('./release-version.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const PACKAGE_FILE = path.join(ROOT, 'package.json');
 const DRY_RUN = process.argv.includes('--dry-run');
 const AUTO_CONFIRM = process.argv.includes('--yes');
-const VERSION_MODES = ['--patch', '--minor'];
+const VERSION_MODES = ['--current', '--patch', '--minor'];
 const requestedModes = VERSION_MODES.filter((arg) => process.argv.includes(arg));
 if (requestedModes.length > 1) {
-  fail('版本参数只能选择一个：--patch 或 --minor');
+  fail('版本参数只能选择一个：--current、--patch 或 --minor');
 }
-const VERSION_MODE = requestedModes[0] === '--minor' ? 'minor' : 'patch';
+const VERSION_MODE = requestedModes.length === 0 ? 'current' : requestedModes[0].slice(2);
 const knownArgs = new Set(['--dry-run', '--yes', ...VERSION_MODES]);
 
 for (const arg of process.argv.slice(2)) {
   if (!knownArgs.has(arg)) {
-    fail(`未知参数: ${arg}\n用法: node scripts/release-patch.js [--patch|--minor] [--dry-run] [--yes]`);
+    fail(`未知参数: ${arg}\n用法: node scripts/release-patch.js [--current|--patch|--minor] [--dry-run] [--yes]`);
   }
 }
 
@@ -91,16 +92,8 @@ function readPackage() {
   } catch (error) {
     fail(`无法读取 package.json：${error.message}`);
   }
-  if (!/^\d+\.\d+\.\d+$/.test(pkg.version || '')) {
-    fail(`package.json version 必须是三段数字版本，当前为：${pkg.version}`);
-  }
+  try { validateVersion(pkg.version); } catch (error) { fail(`package.json version ${error.message}`); }
   return pkg;
-}
-
-function nextVersion(version, mode) {
-  const [major, minor, patch] = version.split('.').map(Number);
-  if (mode === 'minor') return `${major}.${minor + 1}.0`;
-  return `${major}.${minor}.${patch + 1}`;
 }
 
 function ensureCleanMainBranch() {
@@ -130,12 +123,15 @@ function ensureTagAvailable(tag) {
   }
 }
 
-function confirmRelease(tag, currentVersion, nextVersion) {
+function confirmRelease(tag, currentVersion, targetVersion, mode) {
   if (AUTO_CONFIRM) return Promise.resolve(true);
   const input = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const transition = mode === 'current'
+    ? `使用当前版本 ${currentVersion}`
+    : `${currentVersion} → ${targetVersion}`;
   return new Promise((resolve) => {
     input.question(
-      `确认发布 ${tag}（${currentVersion} → ${nextVersion}，将推送 main 和 Tag）？[y/N] `,
+      `确认发布 ${tag}（${transition}，将推送 main 和 Tag）？[y/N] `,
       (answer) => {
         input.close();
         resolve(answer.trim().toLowerCase() === 'y');
@@ -148,14 +144,14 @@ async function main() {
   ensureCleanMainBranch();
   const pkg = readPackage();
   const currentVersion = pkg.version;
-  const targetVersion = nextVersion(currentVersion, VERSION_MODE);
-  const tag = `v${targetVersion}`;
+  const releaseVersion = nextVersion(currentVersion, VERSION_MODE);
+  const tag = `v${releaseVersion}`;
 
   if (!DRY_RUN) ensureTagAvailable(tag);
 
   console.log(`当前版本: ${currentVersion}`);
-  console.log(`版本模式: ${VERSION_MODE === 'minor' ? '大版本（中间段 +1，末尾清零）' : '小版本（末尾 +1）'}`);
-  console.log(`下一个版本: ${targetVersion}`);
+  console.log(`版本模式: ${modeLabel(VERSION_MODE)}`);
+  console.log(`目标版本: ${releaseVersion}`);
   console.log(`目标 Tag: ${tag}`);
 
   if (DRY_RUN) {
@@ -163,7 +159,7 @@ async function main() {
     return;
   }
 
-  if (!(await confirmRelease(tag, currentVersion, targetVersion))) {
+  if (!(await confirmRelease(tag, currentVersion, releaseVersion, VERSION_MODE))) {
     console.log('已取消发布。');
     return;
   }
@@ -174,13 +170,15 @@ async function main() {
   try {
     run('npm', ['test']);
 
-    const nextPackage = { ...pkg, version: targetVersion };
-    fs.writeFileSync(PACKAGE_FILE, `${JSON.stringify(nextPackage, null, 2)}\n`, 'utf8');
-    packageUpdated = true;
+    if (releaseVersion !== currentVersion) {
+      const nextPackage = { ...pkg, version: releaseVersion };
+      fs.writeFileSync(PACKAGE_FILE, `${JSON.stringify(nextPackage, null, 2)}\n`, 'utf8');
+      packageUpdated = true;
 
-    run('git', ['add', 'package.json']);
-    run('git', ['commit', '-m', `release: ${tag}`]);
-    committed = true;
+      run('git', ['add', 'package.json']);
+      run('git', ['commit', '-m', `release: ${tag}`]);
+      committed = true;
+    }
 
     run('git', ['push', 'origin', 'main']);
     run('git', ['tag', '-a', tag, '-m', `Release ${tag}`]);

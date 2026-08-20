@@ -161,9 +161,9 @@ Tag 去掉 `v` 后必须与 `package.json` 的 `version` 完全一致。Workflow
 npm run release:patch
 ```
 
-脚本会将当前版本的补丁号加 1，例如 `0.1.1 → 0.1.2`，然后依次运行测试、提交 `package.json`、推送 `main`、创建 Tag 和推送 Tag。默认执行前会要求确认。
+`npm run release` 默认发布 `package.json` 中的当前版本，不会自动递增；需要递增时使用 `npm run release -- --patch` 或 `npm run release -- --minor`。发布流程会运行测试、提交版本变更（递增模式）、推送 `main`、创建 Tag 并推送 Tag。默认执行前会要求确认。
 
-默认发布小版本（补丁号）：
+默认发布当前版本：
 
 ```bash
 npm run release
@@ -175,7 +175,7 @@ npm run release
 npm run release -- --minor
 ```
 
-例如当前版本为 `0.1.1` 时，`npm run release` 目标为 `0.1.2`，`npm run release -- --minor` 目标为 `0.2.0`。
+例如当前版本为 `0.1.3` 时，`npm run release` 目标为 `0.1.3`，`npm run release -- --patch` 目标为 `0.1.4`，`npm run release -- --minor` 目标为 `0.2.0`。
 
 仅预览，不修改文件、不测试、不推送：
 
@@ -189,4 +189,4 @@ npm run release -- --dry-run
 npm run release -- --yes
 ```
 
-脚本也支持显式指定小版本模式：`npm run release -- --patch`。脚本要求当前处于 `main` 分支且工作区干净，并会拒绝使用已经存在的本地或远程 Tag。
+脚本也支持显式指定当前版本模式：`npm run release -- --current`。脚本要求当前处于 `main` 分支且工作区干净，并会拒绝使用已经存在的本地或远程 Tag。

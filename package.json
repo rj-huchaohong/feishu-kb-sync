@@ -11,7 +11,7 @@
     "start": "node bin/feishu-kb-sync.js",
     "test": "node scripts/check-schedule-vbs.js && node --test",
     "release": "node scripts/release-patch.js",
-    "release:patch": "node scripts/release-patch.js"
+    "release:patch": "node scripts/release-patch.js --patch"
   },
   "engines": {
     "node": ">=18"
