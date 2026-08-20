@@ -72,8 +72,11 @@ feishu-kb-sync config add <本地名称> <知识库链接或 space_id>
 
 ```bash
 feishu-kb-sync config list
+feishu-kb-sync config list --json
 feishu-kb-sync config remove <本地名称>
 ```
+
+`config list --json` 会返回配置文件位置、实际缓存根目录及其来源。通过 `config set-root` 设置的根目录会标记为 `explicit`；没有来源元数据的旧配置会标记为 `legacy`，避免误判历史配置来源。
 
 同一个飞书知识库以 `space_id` 作为稳定身份。修改本地名称时，同步器会尝试迁移已有缓存目录；目标目录存在冲突时会停止并提示处理。
 
